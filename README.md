@@ -23,6 +23,7 @@
 - [Design Decisions](#design-decisions)
 - [Domain Model](#domain-model)
 - [API Reference](#api-reference)
+- [Running with Docker](#-running-with-docker)
 - [Getting Started](#getting-started)
 - [Try It Out](#try-it-out)
 - [Error Handling](#error-handling)
@@ -51,8 +52,8 @@ It handles the problems real booking systems face:
 
 ## Highlights
 
-| | |
-|---|---|
+|  |  |
+| --- | --- |
 | 🧩 **Modular Monolith** | 5 independent modules, each with its own `DbContext`, SQL schema, and migrations. No project references between modules. |
 | 🔐 **Authentication** | JWT access tokens, refresh tokens with rotation and revocation, role-based authorization (`Admin`, `Customer`). |
 | 🪑 **Seat holds** | Seats are held for 15 minutes. A background service releases them when an unpaid booking expires. |
@@ -90,7 +91,7 @@ flowchart TB
 ### Modules
 
 | Module | Responsibility |
-|---|---|
+| --- | --- |
 | **Identity** | Registration, login, JWT, refresh token rotation and revocation, roles, seeding. |
 | **Flights** | Airports, aircraft and their seat maps, flights, per-flight seats and pricing, search, flight status transitions and cancellation. |
 | **Bookings** | Creating bookings, holding seats, confirmation, cancellation, automatic expiry, passenger types. |
@@ -204,7 +205,7 @@ flowchart LR
 ### Data model (per schema)
 
 | Schema | Tables |
-|---|---|
+| --- | --- |
 | `identity` | ASP.NET Identity tables, `RefreshTokens` |
 | `flights` | `Airports`, `Aircrafts`, `AircraftSeats`, `Flights`, `FlightSeats` |
 | `bookings` | `Bookings`, `BookingPassengers`, `BookingSeats` |
@@ -220,7 +221,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Auth
 
 | Method | Route | Auth | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | POST | `/auth/register` | public | Register a customer |
 | POST | `/auth/login` | public | Get an access token and a refresh token |
 | POST | `/auth/refresh-token` | public | Exchange a refresh token for a new pair (rotation) |
@@ -230,7 +231,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Airports
 
 | Method | Route | Auth | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | GET | `/airports` | public | List with search and paging (ordered by country, then city) |
 | GET | `/airports/{id}` | public | Get by id |
 | GET | `/airports/by-code/{iataCode}` | public | Get by IATA code |
@@ -239,7 +240,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Aircraft (Admin)
 
 | Method | Route | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/aircrafts`, `/aircrafts/{id}` | List and get |
 | POST · PUT | `/aircrafts`, `/aircrafts/{id}` | Create and update |
 | PATCH | `/aircrafts/{id}/activate`, `/deactivate` | Activate or deactivate |
@@ -250,7 +251,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Flights
 
 | Method | Route | Auth | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | GET | `/flights/search` | public | Search by `origin`, `destination`, `date`, `passengers`, optional `cabinClass` |
 | GET | `/flights/{id}` | public | Flight details |
 | GET | `/flights/{id}/seats` | public | All seats |
@@ -266,7 +267,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Bookings
 
 | Method | Route | Auth | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | POST | `/bookings` | user | Create a booking (seats are held 15 minutes) |
 | GET | `/bookings/my` | user | My bookings (filter by status, paged) |
 | GET | `/bookings/{id}` | user | Booking details (owner or Admin) |
@@ -276,7 +277,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Payments
 
 | Method | Route | Auth | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | POST | `/payments` | user | Pay for a booking. Requires the `Idempotency-Key` header |
 | GET | `/payments/{id}` | user | Payment details (owner or Admin) |
 | GET | `/payments/booking/{bookingId}` | user | Payments of a booking (owner or Admin) |
@@ -284,7 +285,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Reports (Admin)
 
 | Method | Route | Description |
-|---|---|---|
+| --- | --- | --- |
 | GET | `/reports/revenue` | Revenue, refunds, and net per day (`from`, `to`, `currency`) |
 | GET | `/reports/bookings-by-status` | Count and amount per status |
 | GET | `/reports/top-routes` | Top routes by bookings and revenue (`top`) |
@@ -293,10 +294,45 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Mock payment tokens
 
 | `cardToken` | Result |
-|---|---|
+| --- | --- |
 | `tok_success` | Payment succeeds, booking becomes `Confirmed` (`200`) |
 | `tok_declined` | The card is declined (`402`), booking stays `Pending` |
 | `tok_insufficient_funds` | Insufficient funds (`402`), booking stays `Pending` |
+
+---
+
+## 🐳 Running with Docker
+
+You can run the entire stack (ASP.NET Core 8 Web API + SQL Server 2022) directly using the pre-built image from Docker Hub, without installing the .NET SDK or SQL Server locally.
+
+### 1. Configure environment variables
+
+Copy the example environment file and set a strong database `SA` password and a JWT secret of at least 32 characters:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and fill in your values:
+
+```env
+SA_PASSWORD=Your_strong_Password123
+JWT_SECRET=your-jwt-secret-key-at-least-32-characters-long
+```
+
+> The JWT secret must be at least 32 characters, and the SQL Server `SA` password must meet SQL Server's complexity requirements.
+
+### 2. Start the containers
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+### 3. Access the API
+
+- **Swagger UI:** http://localhost:8080/swagger
+- **Docker Hub image:** `docker pull sirajmohamed/flight-booking-api:1.0.0`
 
 ---
 
@@ -313,7 +349,7 @@ All routes start with `/api`. **Auth** column: *public* needs no token, *user* a
 ### Demo data
 
 | What | Details |
-|---|---|
+| --- | --- |
 | Customers | `ahmed.ali@example.com`, `sara.hassan@example.com`, `omar.khaled@example.com`, `mona.adel@example.com` (password `Customer@123`) |
 | Airports | CAI, DXB, JED, RUH, IST, LHR |
 | Aircraft | Boeing 737-800, Airbus A320, and one inactive Airbus A330, with Economy, Premium Economy, Business, and First seats |
@@ -344,7 +380,7 @@ A complete flow from Swagger:
 One global exception handler converts exceptions into RFC 7807 `ProblemDetails`.
 
 | Situation | Status |
-|---|---|
+| --- | --- |
 | Validation error (DataAnnotations) | `400` |
 | Missing `Idempotency-Key` header | `400` |
 | Not signed in / wrong role | `401` / `403` |
@@ -358,8 +394,8 @@ One global exception handler converts exceptions into RFC 7807 `ProblemDetails`.
 
 ## Tech Stack
 
-| | |
-|---|---|
+|  |  |
+| --- | --- |
 | Runtime | .NET 8, ASP.NET Core Web API |
 | Data | Entity Framework Core 8, SQL Server (Docker), LINQ |
 | Auth | ASP.NET Core Identity (`AddIdentityCore`), JWT Bearer, refresh tokens |
@@ -371,7 +407,7 @@ One global exception handler converts exceptions into RFC 7807 `ProblemDetails`.
 
 ## Project Structure
 
-```
+```javascript
 src/
 ├── FlightBooking.Api/                 Composition root
 │   ├── ExceptionHandling/             Global exception handler
