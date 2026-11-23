@@ -1,4 +1,17 @@
 bin/
 obj/
+out/
+publish/
+
 .vs/
+.vscode/
 *.user
+*.suo
+
+.env
+.env.*
+!.env.example
+*.pfx
+
+.DS_Store
+Thumbs.db
